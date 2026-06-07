@@ -629,10 +629,10 @@ function renderMeetingBar() {
 }
 
 function getMeetingTitle(dateStr) {
-  const m = dateStr.match(/(\d{4})[\/\-年](\d{1,2})/);
+  const m = dateStr.match(/(\d{4})[\/\-年](\d{1,2})[\/\-月](\d{1,2})/);
   if (m) {
-    const year=parseInt(m[1]), month=parseInt(m[2]);
-    if (year>2026||(year===2026&&month>=7)) return '2026執行部　会長副会長会議';
+    const year=parseInt(m[1]), month=parseInt(m[2]), day=parseInt(m[3]);
+    if (year>2026||(year===2026&&month>=7)||(year===2026&&month===6&&day>=29)) return '2026執行部　会長副会長会議';
   }
   return '2024執行部　会長副会長会議';
 }
