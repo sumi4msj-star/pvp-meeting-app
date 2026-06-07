@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PVP会議 資料とりまとめ</title>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <style>
+    :root {
+      --primary: #1a56db;
+      --primary-dark: #1341aa;
+      --danger: #e02424;
+      --success: #057a55;
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --border: #d1d5db;
+      --text: #111827;
+      --muted: #6b7280;
+      --shingi: #1e40af;
+      --hokoku: #065f46;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Hiragino Sans", "Meiryo", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ===== ヘッダー ===== */
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 6px rgba(0,0,0,.2);
+    }
+    header h1 { font-size: 1rem; font-weight: 700; }
+    header .header-right { display: flex; align-items: center; gap: 12px; }
+    #userInfo { font-size: .8rem; opacity: .9; }
+    .btn-sm {
+      padding: 5px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: .82rem;
+      font-weight: 600;
+    }
+    .btn-logout { background: rgba(255,255,255,.2); color: white; }
+    .btn-logout:hover { background: rgba(255,255,255,.35); }
+    .btn-settings { background: rgba(255,255,255,.15); color: white; }
+    .btn-settings:hover { background: rgba(255,255,255,.3); }
+
+    /* ===== ナビタブ ===== */
+    nav.tabs {
+      background: white;
+      border-bottom: 2px solid var(--border);
+      display: flex;
+      padding: 0 20px;
+    }
+    nav.tabs button {
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      padding: 12px 18px;
+      cursor: pointer;
+      font-size: .9rem;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: -2px;
+    }
+    nav.tabs button.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    /* ===== コンテンツエリア ===== */
+    main { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+
+    /* ===== カード ===== */
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: .85rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 12px;
+    }
+
+    /* ===== ログイン画面 ===== */
+    #loginScreen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 80vh;
+      gap: 24px;
+    }
+    #loginScreen .logo {
+      font-size: 2.5rem;
+      margin-bottom: 8px;
+    }
+    #loginScreen h2 {
+      font-size: 1.4rem;
+      color: var(--text);
+    }
+    #loginScreen p {
+      color: var(--muted);
+      font-size: .9rem;
+      text-align: center;
+      max-width: 360px;
+    }
+    #loginScreen .setup-hint {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: .82rem;
+      color: #1e40af;
+      max-width: 420px;
+      text-align: left;
+    }
+    #loginScreen .setup-hint a { color: var(--primary); }
+
+    .btn-google {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: white;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,.08);
+      transition: box-shadow .15s;
+    }
+    .btn-google:hover { box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+    .btn-google img { width: 22px; height: 22px; }
+
+    /* ===== 初期設定モーダル ===== */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.5);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200;
+    }
+    .modal {
+      background: white;
+      border-radius: 14px;
+      padding: 28px;
+      width: min(480px, 95vw);
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    }
+    .modal h3 { font-size: 1.1rem; margin-bottom: 6px; }
+    .modal p { font-size: .85rem; color: var(--muted); margin-bottom: 18px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 6px; }
+    .form-group input, .form-group textarea {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: .9rem;
+      font-family: monospace;
+    }
+    .form-group input:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .form-group .hint { font-size: .78rem; color: var(--muted); margin-top: 4px; }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: .95rem;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-primary:disabled { background: #9ca3af; cursor: not-allowed; }
+
+    /* ===== 会議情報バー ===== */
+    #meetingBar {
+      background: linear-gradient(135deg, #1e3a8a, #1a56db);
+      color: white;
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    #meetingBar .meeting-date { font-size: 1.3rem; font-weight: 700; }
+    #meetingBar .meeting-sub { font-size: .82rem; opacity: .8; margin-top: 2px; }
+    #meetingBar .meeting-stats { display: flex; gap: 20px; }
+    #meetingBar .stat { text-align: center; }
+    #meetingBar .stat-num { font-size: 1.6rem; font-weight: 800; line-height: 1; }
+    #meetingBar .stat-label { font-size: .72rem; opacity: .8; }
+
+    /* ===== ツールバー ===== */
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .toolbar .spacer { flex: 1; }
+    .btn-reload {
+      background: white;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: .87rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .btn-reload:hover { background: var(--bg); }
+    .btn-renumber {
+      background: #fef3c7;
+      border: 1.5px solid #fbbf24;
+      color: #92400e;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: .87rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-renumber:hover { background: #fde68a; }
+
+    .btn-merge {
+      background: var(--success);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 22px;
+      font-size: .95rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 3px 10px rgba(5,122,85,.35);
+    }
+    .btn-merge:hover { background: #046c4e; }
+    .btn-merge:disabled { background: #9ca3af; box-shadow: none; cursor: not-allowed; }
+
+    /* ===== 議題テーブル ===== */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    thead tr { background: #f9fafb; }
+    th {
+      padding: 10px 12px;
+      text-align: left;
+      font-size: .78rem;
+      font-weight: 700;
+      color: var(--muted);
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+    }
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:hover td { background: #f0f4ff; }
+
+    .drag-handle {
+      cursor: grab;
+      color: var(--muted);
+      font-size: 1rem;
+      user-select: none;
+      padding-right: 4px;
+    }
+    .drag-handle:active { cursor: grabbing; }
+    tr.dragging { opacity: .4; }
+    tr.drag-over td { border-top: 2px solid var(--primary); }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: .75rem;
+      font-weight: 700;
+    }
+    .badge-shingi { background: #dbeafe; color: var(--shingi); }
+    .badge-hokoku { background: #d1fae5; color: var(--hokoku); }
+
+    .num-cell {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--primary);
+      min-width: 36px;
+    }
+    .title-cell { max-width: 300px; }
+    .title-cell .title-main { font-weight: 600; }
+    .title-cell .title-sub { font-size: .77rem; color: var(--muted); margin-top: 2px; }
+
+    .file-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+    .file-chip {
+      background: #f3f4f6;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-size: .72rem;
+      color: var(--muted);
+    }
+    .file-chip.pdf-chip { background: #fef2f2; border-color: #fca5a5; color: #b91c1c; }
+    .file-chip.sheet-chip { background: #f0fdf4; border-color: #86efac; color: #15803d; }
+    .file-chip.doc-chip { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+
+    .no-file { color: var(--muted); font-size: .8rem; }
+
+    /* 番号編集インプット */
+    .order-input {
+      width: 52px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 6px;
+      font-size: .9rem;
+      text-align: center;
+    }
+    .order-input:focus { outline: none; border-color: var(--primary); }
+
+    /* ===== ローディング ===== */
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .spinner {
+      display: inline-block;
+      width: 36px; height: 36px;
+      border: 4px solid #e5e7eb;
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      margin-bottom: 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== エラー・通知 ===== */
+    .alert {
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: .88rem;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .alert-error { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; }
+    .alert-info { background: #eff6ff; border: 1px solid #93c5fd; color: #1e40af; }
+    .alert-success { background: #f0fdf4; border: 1px solid #86efac; color: #15803d; }
+
+    /* ===== プログレス ===== */
+    .progress-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 300;
+    }
+    .progress-box {
+      background: white;
+      border-radius: 14px;
+      padding: 32px 40px;
+      width: min(400px, 90vw);
+      text-align: center;
+    }
+    .progress-box h3 { font-size: 1.1rem; margin-bottom: 6px; }
+    .progress-box p { font-size: .85rem; color: var(--muted); margin-bottom: 18px; }
+    .progress-bar-wrap {
+      height: 10px;
+      background: #e5e7eb;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 10px;
+      transition: width .3s ease;
+    }
+    .progress-status { font-size: .82rem; color: var(--muted); margin-top: 10px; }
+
+    /* ===== 設定画面 ===== */
+    #settingsTab { display: none; }
+    .settings-section { margin-bottom: 28px; }
+    .settings-section h3 { font-size: 1rem; font-weight: 700; margin-bottom: 14px; border-bottom: 1.5px solid var(--border); padding-bottom: 8px; }
+
+    .member-list { list-style: none; }
+    .member-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      background: white;
+      cursor: grab;
+    }
+    .member-item:active { cursor: grabbing; }
+    .member-item .m-order { width: 24px; height: 24px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 700; flex-shrink: 0; }
+    .member-item input {
+      flex: 1;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 4px 6px;
+      font-size: .9rem;
+    }
+    .member-item input:focus { outline: none; border-color: var(--primary); background: #f0f4ff; }
+    .member-item .btn-del { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1rem; padding: 2px 6px; }
+
+    .btn-add-member {
+      background: none;
+      border: 1.5px dashed var(--border);
+      border-radius: 8px;
+      width: 100%;
+      padding: 9px;
+      color: var(--muted);
+      font-size: .88rem;
+      cursor: pointer;
+    }
+    .btn-add-member:hover { border-color: var(--primary); color: var(--primary); }
+
+    .btn-save-settings {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 24px;
+      font-size: .95rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-save-settings:hover { background: var(--primary-dark); }
+
+    /* ===== レスポンシブ ===== */
+    @media (max-width: 640px) {
+      header h1 { font-size: .9rem; }
+      #meetingBar .meeting-date { font-size: 1.1rem; }
+      .btn-merge { font-size: .85rem; padding: 9px 14px; }
+      th, td { padding: 8px 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== ヘッダー ===== -->
+<header id="appHeader" style="display:none">
+  <h1>🏥 PVP会議 資料とりまとめ</h1>
+  <div class="header-right">
+    <span id="userInfo"></span>
+    <button class="btn-sm btn-settings" onclick="showTab('settings')">⚙️ 設定</button>
+    <button class="btn-sm btn-logout" onclick="signOut()">ログアウト</button>
+  </div>
+</header>
+
+<!-- ===== ナビタブ ===== -->
+<nav class="tabs" id="appTabs" style="display:none">
+  <button class="active" onclick="showTab('main')" id="tab-main">📋 議題一覧</button>
+  <button onclick="showTab('settings')" id="tab-settings">⚙️ 設定</button>
+</nav>
+
+<!-- ===== ログイン画面 ===== -->
+<div id="loginScreen">
+  <div class="logo">🏥</div>
+  <h2>PVP会議 資料とりまとめ</h2>
+  <p>日本眼科医会 PVP会議の議題資料を自動収集・PDF結合するツールです。</p>
+
+  <div id="configAlert" class="alert alert-info" style="display:none; max-width:420px;">
+    <span>⚠️</span>
+    <div>初回起動です。下の「初期設定」ボタンからOAuthクライアントIDを登録してください。</div>
+  </div>
+
+  <button class="btn-google" id="signInBtn" onclick="handleSignIn()">
+    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+    Googleアカウントでログイン
+  </button>
+  <button class="btn-sm" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:8px 16px;cursor:pointer;" onclick="openConfigModal()">
+    🔧 初期設定（クライアントID入力）
+  </button>
+
+  <div class="setup-hint">
+    <strong>📌 初回セットアップ手順</strong><br>
+    1. Google Cloud Console でOAuthクライアントIDを取得<br>
+    2. 上の「初期設定」ボタンからIDを入力・保存<br>
+    3. 「Googleアカウントでログイン」をクリック
+  </div>
+</div>
+
+<!-- ===== 初期設定モーダル ===== -->
+<div class="modal-overlay" id="configModal" style="display:none">
+  <div class="modal">
+    <h3>🔧 初期設定</h3>
+    <p>Google Cloud Console で取得した情報を入力してください。入力値はブラウザのローカルストレージに保存されます。</p>
+
+    <div class="form-group">
+      <label>OAuth クライアントID <span style="color:var(--danger)">*</span></label>
+      <input type="text" id="inputClientId" placeholder="123456789-abc...apps.googleusercontent.com" />
+      <div class="hint">Google Cloud Console → 認証情報 → OAuthクライアントID</div>
+    </div>
+
+    <div class="form-group">
+      <label>スプレッドシートID</label>
+      <input type="text" id="inputSheetId" value="1z0Rtsr0Ri-g8aAh0b8CCIxEGa7vDhGNsspqn6PywmlQ" />
+      <div class="hint">フォーム回答が記録されるGoogleスプレッドシートのID</div>
+    </div>
+
+    <div class="form-group">
+      <label>シート名（タブ名）</label>
+      <input type="text" id="inputSheetName" placeholder="フォームの回答 1" value="フォームの回答 1" />
+      <div class="hint">スプレッドシート下部のタブ名（デフォルトは「フォームの回答 1」）</div>
+    </div>
+
+    <button class="btn-primary" onclick="saveConfig()">💾 保存してログイン画面へ戻る</button>
+    <button style="width:100%;margin-top:8px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:.85rem;padding:6px;" onclick="closeConfigModal()">キャンセル</button>
+  </div>
+</div>
+
+<!-- ===== メインコンテンツ ===== -->
+<main id="mainContent" style="display:none">
+
+  <!-- 議題一覧タブ -->
+  <div id="mainTab">
+
+    <div id="meetingBar" class="card" style="background:linear-gradient(135deg,#1e3a8a,#1a56db);color:white;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:16px 20px;margin-bottom:16px;border:none;">
+      <div>
+        <div class="meeting-date" id="meetingDateDisplay">読み込み中...</div>
+        <div class="meeting-sub">PVP会議（会長・副会長出席会議）</div>
+      </div>
+      <div style="display:flex;gap:20px;">
+        <div class="stat" style="text-align:center;">
+          <div class="stat-num" id="statShingi">-</div>
+          <div class="stat-label" style="font-size:.72rem;opacity:.8;">審議事項</div>
+        </div>
+        <div class="stat" style="text-align:center;">
+          <div class="stat-num" id="statHokoku">-</div>
+          <div class="stat-label" style="font-size:.72rem;opacity:.8;">報告事項</div>
+        </div>
+        <div class="stat" style="text-align:center;">
+          <div class="stat-num" id="statTotal">-</div>
+          <div class="stat-label" style="font-size:.72rem;opacity:.8;">合計</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="alertArea"></div>
+
+    <div class="toolbar">
+      <button class="btn-reload" onclick="loadAgendas()">🔄 再読み込み</button>
+      <button class="btn-renumber" onclick="autoNumber()">🔢 番号を自動振り直し</button>
+      <div class="spacer"></div>
+      <button class="btn-merge" id="mergeBtn" onclick="startMerge()" disabled>
+        📥 PDF結合してダウンロード
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">議題一覧（ドラッグ&amp;ドロップで並べ替え可能）</div>
+      <div id="tableArea">
+        <div class="loading">
+          <div class="spinner"></div>
+          <div>読み込み中...</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /mainTab -->
+
+  <!-- 設定タブ -->
+  <div id="settingsTab" style="display:none">
+    <div class="card">
+      <div class="settings-section">
+        <h3>👤 提出者マスターリスト（順番＝優先度）</h3>
+        <p style="font-size:.85rem;color:var(--muted);margin-bottom:14px;">
+          上から順に番号が割り振られます。ドラッグで並べ替え、鉛筆アイコンで名前編集ができます。
+        </p>
+        <ul class="member-list" id="memberList"></ul>
+        <button class="btn-add-member" onclick="addMember()">＋ 提出者を追加</button>
+      </div>
+
+      <div class="settings-section">
+        <h3>🔧 接続設定</h3>
+        <div class="form-group">
+          <label>スプレッドシートID</label>
+          <input type="text" id="settingsSheetId" />
+        </div>
+        <div class="form-group">
+          <label>シート名</label>
+          <input type="text" id="settingsSheetName" />
+        </div>
+        <div class="form-group">
+          <label>OAuthクライアントID</label>
+          <input type="text" id="settingsClientId" />
+        </div>
+      </div>
+
+      <button class="btn-save-settings" onclick="saveSettings()">💾 設定を保存</button>
+    </div>
+  </div><!-- /settingsTab -->
+
+</main>
+
+<!-- ===== プログレスオーバーレイ ===== -->
+<div class="progress-overlay" id="progressOverlay" style="display:none">
+  <div class="progress-box">
+    <h3 id="progressTitle">PDF結合中...</h3>
+    <p id="progressDesc">しばらくお待ちください</p>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progressBar" style="width:0%"></div>
+    </div>
+    <div class="progress-status" id="progressStatus">処理を開始しています...</div>
+  </div>
+</div>
+
+<script>
+// =====================================================================
+// 設定 / ストレージ
+// =====================================================================
+const STORAGE_KEY = 'pvp_config';
+const MEMBER_KEY  = 'pvp_members';
+
+const DEFAULT_MEMBERS = [
+  { name: '加藤', role: '会長' },
+  { name: '柿田', role: '副会長' },
+  { name: '益原', role: '副会長' },
+  { name: '野下', role: '副会長' },
+  { name: '西村', role: '常任理事（総務）' },
+  { name: '石津', role: '事務局長' },
+];
+
+function getConfig() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+}
+function saveConfigToStorage(cfg) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg));
+}
+function getMembers() {
+  try {
+    const m = JSON.parse(localStorage.getItem(MEMBER_KEY));
+    return Array.isArray(m) && m.length ? m : [...DEFAULT_MEMBERS];
+  } catch { return [...DEFAULT_MEMBERS]; }
+}
+function saveMembersToStorage(m) {
+  localStorage.setItem(MEMBER_KEY, JSON.stringify(m));
+}
+
+// =====================================================================
+// Google Identity Services 初期化
+// =====================================================================
+let tokenClient = null;
+let accessToken  = null;
+let currentUser  = null;
+let gisReady     = false;
+
+// GISスクリプト読み込み完了後に自動呼び出されるコールバック
+function onGoogleLibraryLoad() {
+  gisReady = true;
+  const cfg = getConfig();
+  if (!cfg.clientId) {
+    document.getElementById('configAlert').style.display = 'flex';
+    return;
+  }
+  buildTokenClient(cfg.clientId);
+}
+
+function buildTokenClient(clientId) {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: [
+      'https://www.googleapis.com/auth/drive.readonly',
+      'https://www.googleapis.com/auth/spreadsheets.readonly',
+      'openid',
+      'email',
+      'profile',
+    ].join(' '),
+    callback: handleToken,
+    error_callback: (err) => {
+      console.error('GIS error_callback:', err);
+      showLoginError(`ログインがキャンセルされたか、エラーが発生しました: ${err.type || JSON.stringify(err)}`);
+    },
+  });
+}
+
+function handleSignIn() {
+  const cfg = getConfig();
+  if (!cfg.clientId) {
+    openConfigModal();
+    return;
+  }
+  if (!gisReady) {
+    showLoginError('Googleライブラリがまだ読み込み中です。数秒待ってから再度お試しください。');
+    return;
+  }
+  if (!tokenClient) {
+    buildTokenClient(cfg.clientId);
+  }
+  // prompt: '' にすると既存セッションがあれば自動選択、なければアカウント選択画面を表示
+  tokenClient.requestAccessToken({ prompt: '' });
+}
+
+function handleToken(resp) {
+  if (resp.error) {
+    console.error('Token error:', resp);
+    showLoginError(`ログインエラー: ${resp.error}${resp.error_description ? ' — ' + resp.error_description : ''}`);
+    return;
+  }
+  accessToken = resp.access_token;
+  fetchUserInfo();
+}
+
+async function fetchUserInfo() {
+  try {
+    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!r.ok) throw new Error(`userinfo取得失敗 (${r.status})`);
+    currentUser = await r.json();
+    document.getElementById('userInfo').textContent = currentUser.name || currentUser.email;
+    showApp();
+  } catch (e) {
+    showLoginError(`ユーザー情報の取得に失敗しました: ${e.message}`);
+  }
+}
+
+function showLoginError(msg) {
+  const area = document.getElementById('configAlert');
+  area.className = 'alert alert-error';
+  area.style.display = 'flex';
+  area.innerHTML = `<span>❌</span><div>${msg}</div>`;
+}
+
+function signOut() {
+  if (accessToken) {
+    google.accounts.oauth2.revoke(accessToken, () => {});
+  }
+  accessToken = null;
+  currentUser = null;
+  tokenClient = null;
+  location.reload();
+}
+
+// initGIS は後方互換のために残す（saveConfig から呼ばれる）
+function initGIS() {
+  const cfg = getConfig();
+  if (!cfg.clientId) {
+    document.getElementById('configAlert').style.display = 'flex';
+    return;
+  }
+  if (gisReady) buildTokenClient(cfg.clientId);
+}
+
+// =====================================================================
+// 画面切り替え
+// =====================================================================
+function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appHeader').style.display = 'flex';
+  document.getElementById('appTabs').style.display = 'flex';
+  document.getElementById('mainContent').style.display = 'block';
+  showTab('main');
+  loadAgendas();
+}
+
+function showTab(tab) {
+  document.getElementById('mainTab').style.display     = tab === 'main'     ? 'block' : 'none';
+  document.getElementById('settingsTab').style.display = tab === 'settings' ? 'block' : 'none';
+  document.getElementById('tab-main').classList.toggle('active',     tab === 'main');
+  document.getElementById('tab-settings').classList.toggle('active', tab === 'settings');
+  if (tab === 'settings') renderSettingsTab();
+}
+
+// =====================================================================
+// 設定モーダル
+// =====================================================================
+function openConfigModal() {
+  const cfg = getConfig();
+  document.getElementById('inputClientId').value  = cfg.clientId  || '';
+  document.getElementById('inputSheetId').value   = cfg.sheetId   || '1z0Rtsr0Ri-g8aAh0b8CCIxEGa7vDhGNsspqn6PywmlQ';
+  document.getElementById('inputSheetName').value = cfg.sheetName || 'フォームの回答 1';
+  document.getElementById('configModal').style.display = 'flex';
+}
+function closeConfigModal() {
+  document.getElementById('configModal').style.display = 'none';
+}
+function saveConfig() {
+  const clientId = document.getElementById('inputClientId').value.trim();
+  if (!clientId) { alert('OAuthクライアントIDを入力してください。'); return; }
+  const cfg = {
+    clientId,
+    sheetId:   document.getElementById('inputSheetId').value.trim(),
+    sheetName: document.getElementById('inputSheetName').value.trim(),
+  };
+  saveConfigToStorage(cfg);
+  closeConfigModal();
+  document.getElementById('configAlert').style.display = 'none';
+  initGIS();
+  alert('設定を保存しました。Googleアカウントでログインしてください。');
+}
+
+// =====================================================================
+// スプレッドシートからデータ取得
+// =====================================================================
+let agendas = []; // 表示中の議題リスト
+
+async function loadAgendas() {
+  setTableLoading();
+  const cfg = getConfig();
+  const sheetId   = cfg.sheetId   || '1z0Rtsr0Ri-g8aAh0b8CCIxEGa7vDhGNsspqn6PywmlQ';
+  const sheetName = cfg.sheetName || 'フォームの回答 1';
+
+  try {
+    const range = encodeURIComponent(`${sheetName}!A2:M`);
+    const url   = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`;
+    const r     = await gFetch(url);
+    const data  = await r.json();
+
+    if (data.error) throw new Error(data.error.message);
+
+    const rows = data.values || [];
+    agendas = rows
+      .filter(row => row.length >= 5 && row[4]) // E列=タイトル が存在する行のみ
+      .map((row, i) => ({
+        id:        i,
+        timestamp: row[0] || '',
+        date:      row[1] || '',
+        agNum:     row[2] || '',  // C: 議題番号（フォーム入力値）
+        agOrder:   row[3] || '',  // D: 議題の順（審議/報告）
+        title:     row[4] || '',  // E: 議題タイトル
+        hasFile:   row[5] || '',  // F: 資料有無
+        submitter: row[6] || '',  // G: 提出者
+        aiSummary: row[7] || '',  // H: AIまとめ
+        comment:   row[8] || '',  // I: 補足コメント
+        files:     [row[9], row[10], row[11], row[12]].filter(Boolean), // J-M
+        category:  detectCategory(row[3] || ''),
+        displayNum: 0,
+      }));
+
+    autoNumber();
+    renderMeetingBar();
+    renderTable();
+    document.getElementById('mergeBtn').disabled = false;
+
+  } catch (e) {
+    showAlertGlobal('error', `データの取得に失敗しました: ${e.message}`);
+    document.getElementById('tableArea').innerHTML = `
+      <div class="alert alert-error">
+        <span>❌</span>
+        <div>スプレッドシートの読み込みに失敗しました。<br>
+        スプレッドシートIDとシート名が正しいか確認してください。<br>
+        エラー詳細: ${escHtml(e.message)}</div>
+      </div>`;
+  }
+}
+
+function detectCategory(val) {
+  if (/審議/.test(val)) return 'shingi';
+  if (/報告/.test(val)) return 'hokoku';
+  return 'hokoku'; // 不明な場合は報告扱い
+}
+
+// =====================================================================
+// 議題番号の自動割り振り
+// =====================================================================
+function autoNumber() {
+  const members = getMembers();
+
+  // 提出者のインデックスを返す（見つからない場合は末尾）
+  const memberIndex = (name) => {
+    const idx = members.findIndex(m => name && name.includes(m.name));
+    return idx >= 0 ? idx : members.length;
+  };
+
+  // 審議を先、報告を後、各区分内は提出者順、同一提出者内は元の行順
+  const shingi = agendas.filter(a => a.category === 'shingi');
+  const hokoku = agendas.filter(a => a.category === 'hokoku');
+
+  const sortByMember = (arr) =>
+    arr.slice().sort((a, b) => {
+      const diff = memberIndex(a.submitter) - memberIndex(b.submitter);
+      return diff !== 0 ? diff : a.id - b.id;
+    });
+
+  const sorted = [...sortByMember(shingi), ...sortByMember(hokoku)];
+  sorted.forEach((ag, i) => { ag.displayNum = i + 1; });
+
+  // agendas を並べ替えた順に更新
+  agendas = sorted;
+}
+
+// =====================================================================
+// 会議情報バー
+// =====================================================================
+function renderMeetingBar() {
+  const dates = agendas.map(a => a.date).filter(Boolean);
+  const date  = dates[0] || '日付不明';
+  document.getElementById('meetingDateDisplay').textContent = formatDate(date) + ' PVP会議';
+  document.getElementById('statShingi').textContent = agendas.filter(a => a.category === 'shingi').length;
+  document.getElementById('statHokoku').textContent = agendas.filter(a => a.category === 'hokoku').length;
+  document.getElementById('statTotal').textContent  = agendas.length;
+}
+
+function formatDate(s) {
+  // 各種フォーマットに対応
+  const m = s.match(/(\d{4})[\/\-年](\d{1,2})[\/\-月](\d{1,2})/);
+  if (m) return `${m[1]}年${m[2]}月${m[3]}日`;
+  return s;
+}
+
+function getMeetingDateStr() {
+  const dates = agendas.map(a => a.date).filter(Boolean);
+  const s = dates[0] || '';
+  const m = s.match(/(\d{4})[\/\-年](\d{1,2})[\/\-月](\d{1,2})/);
+  if (m) return `${m[1]}${m[2].padStart(2,'0')}${m[3].padStart(2,'0')}`;
+  return new Date().toISOString().slice(0,10).replace(/-/g,'');
+}
+
+// =====================================================================
+// テーブル描画
+// =====================================================================
+function setTableLoading() {
+  document.getElementById('tableArea').innerHTML = `
+    <div class="loading"><div class="spinner"></div><div>読み込み中...</div></div>`;
+}
+
+function renderTable() {
+  if (!agendas.length) {
+    document.getElementById('tableArea').innerHTML = `
+      <div class="alert alert-info">
+        <span>📭</span><div>フォームの回答がまだありません。</div>
+      </div>`;
+    return;
+  }
+
+  const rows = agendas.map((ag, idx) => `
+    <tr draggable="true" data-idx="${idx}"
+        ondragstart="dragStart(event,${idx})"
+        ondragover="dragOver(event,${idx})"
+        ondrop="drop(event,${idx})"
+        ondragend="dragEnd()">
+      <td class="drag-handle">⠿</td>
+      <td class="num-cell">
+        <input class="order-input" type="number" min="1" value="${ag.displayNum}"
+          onchange="manualReorder(${idx}, this.value)" />
+      </td>
+      <td>
+        <span class="badge ${ag.category === 'shingi' ? 'badge-shingi' : 'badge-hokoku'}">
+          ${ag.category === 'shingi' ? '審議' : '報告'}
+        </span>
+      </td>
+      <td class="title-cell">
+        <div class="title-main">${escHtml(ag.title)}</div>
+        ${ag.comment ? `<div class="title-sub">${escHtml(ag.comment)}</div>` : ''}
+      </td>
+      <td>${escHtml(ag.submitter)}</td>
+      <td>${renderFileChips(ag.files)}</td>
+    </tr>`).join('');
+
+  document.getElementById('tableArea').innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>番号</th>
+            <th>区分</th>
+            <th>議題タイトル / 補足</th>
+            <th>提出者</th>
+            <th>添付資料</th>
+          </tr>
+        </thead>
+        <tbody id="agendaTbody">${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function renderFileChips(files) {
+  if (!files || !files.length) return '<span class="no-file">なし</span>';
+  return files.map(f => {
+    const ext = (f.split('.').pop() || '').toLowerCase();
+    let cls = 'file-chip';
+    if (ext === 'pdf') cls += ' pdf-chip';
+    else if (['xls','xlsx','csv'].includes(ext)) cls += ' sheet-chip';
+    else if (['doc','docx'].includes(ext)) cls += ' doc-chip';
+    // Google DriveのURLかもしれないのでURLをそのまま表示
+    const label = f.length > 30 ? '📎 添付ファイル' : '📎 ' + escHtml(f);
+    return `<span class="${cls}" title="${escHtml(f)}">${label}</span>`;
+  }).join('');
+}
+
+// =====================================================================
+// ドラッグ&ドロップ
+// =====================================================================
+let dragSrcIdx = null;
+
+function dragStart(e, idx) {
+  dragSrcIdx = idx;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+function dragOver(e, idx) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('#agendaTbody tr').forEach(r => r.classList.remove('drag-over'));
+  e.currentTarget.classList.add('drag-over');
+}
+function drop(e, idx) {
+  e.preventDefault();
+  if (dragSrcIdx === null || dragSrcIdx === idx) return;
+  const moved = agendas.splice(dragSrcIdx, 1)[0];
+  agendas.splice(idx, 0, moved);
+  agendas.forEach((ag, i) => { ag.displayNum = i + 1; });
+  renderTable();
+  renderMeetingBar();
+}
+function dragEnd() {
+  dragSrcIdx = null;
+  document.querySelectorAll('#agendaTbody tr').forEach(r => {
+    r.classList.remove('dragging', 'drag-over');
+  });
+}
+
+// =====================================================================
+// 手動番号変更
+// =====================================================================
+function manualReorder(fromIdx, newNumStr) {
+  const newNum = parseInt(newNumStr, 10) - 1;
+  if (isNaN(newNum) || newNum < 0 || newNum >= agendas.length) {
+    renderTable(); return;
+  }
+  const moved = agendas.splice(fromIdx, 1)[0];
+  agendas.splice(newNum, 0, moved);
+  agendas.forEach((ag, i) => { ag.displayNum = i + 1; });
+  renderTable();
+}
+
+// =====================================================================
+// Google Drive からファイル取得
+// =====================================================================
+async function fetchFileAsPdf(fileIdOrUrl) {
+  // Google DriveのURLからIDを抽出
+  const idMatch = (fileIdOrUrl || '').match(/[-\w]{25,}/);
+  if (!idMatch) throw new Error(`ファイルIDを抽出できません: ${fileIdOrUrl}`);
+  const fileId = idMatch[0];
+
+  // まずメタデータでMIMEタイプ確認
+  const metaR = await gFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=mimeType,name`);
+  const meta  = await metaR.json();
+  if (meta.error) throw new Error(`ファイルメタデータ取得エラー: ${meta.error.message}`);
+
+  let url;
+  if (meta.mimeType === 'application/pdf') {
+    // PDFはそのまま
+    url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+  } else if (meta.mimeType === 'application/vnd.google-apps.document') {
+    url = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=application/pdf`;
+  } else if (
+    meta.mimeType === 'application/vnd.google-apps.spreadsheet' ||
+    meta.mimeType.includes('spreadsheet') ||
+    meta.mimeType.includes('excel')
+  ) {
+    url = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=application/pdf`;
+  } else if (
+    meta.mimeType.includes('word') ||
+    meta.mimeType.includes('document')
+  ) {
+    url = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=application/pdf`;
+  } else {
+    // その他はPDFとして試みる
+    url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+  }
+
+  const r = await gFetch(url);
+  if (!r.ok) throw new Error(`ファイルダウンロード失敗 (${r.status}): ${meta.name}`);
+  return await r.arrayBuffer();
+}
+
+// =====================================================================
+// PDF結合メイン処理
+// =====================================================================
+async function startMerge() {
+  // 資料のあるエントリを収集
+  const targets = agendas.filter(ag => ag.files && ag.files.length > 0);
+  if (!targets.length) {
+    showAlertGlobal('error', '資料ファイルが登録されている議題がありません。');
+    return;
+  }
+
+  showProgress('PDF結合中...', '各資料をGoogleドライブから取得しています');
+
+  // 全ファイルをフラットリストに
+  const allFiles = [];
+  targets.forEach(ag => {
+    ag.files.forEach(f => allFiles.push({ ag, url: f }));
+  });
+
+  const total = allFiles.length;
+  let done    = 0;
+  const pdfBuffers = [];
+  const errors     = [];
+
+  for (const { ag, url } of allFiles) {
+    updateProgress(
+      Math.round((done / total) * 80),
+      `取得中: 議題${ag.displayNum} ${ag.submitter} の資料...`
+    );
+    try {
+      const buf = await fetchFileAsPdf(url);
+      pdfBuffers.push(buf);
+    } catch (e) {
+      errors.push(`議題${ag.displayNum}（${ag.submitter}）: ${e.message}`);
+    }
+    done++;
+  }
+
+  if (!pdfBuffers.length) {
+    hideProgress();
+    showAlertGlobal('error', 'ダウンロードできた資料がありません。<br>' + errors.join('<br>'));
+    return;
+  }
+
+  updateProgress(85, 'PDFを結合しています...');
+
+  try {
+    const merged = await PDFLib.PDFDocument.create();
+
+    for (const buf of pdfBuffers) {
+      try {
+        const src   = await PDFLib.PDFDocument.load(buf, { ignoreEncryption: true });
+        const pages = await merged.copyPages(src, src.getPageIndices());
+        pages.forEach(p => merged.addPage(p));
+      } catch (e) {
+        errors.push(`PDFのページ取り込みに失敗: ${e.message}`);
+      }
+    }
+
+    updateProgress(95, '保存しています...');
+    const pdfBytes = await merged.save();
+    const blob     = new Blob([pdfBytes], { type: 'application/pdf' });
+    const a        = document.createElement('a');
+    a.href         = URL.createObjectURL(blob);
+    a.download     = `${getMeetingDateStr()}_PVP会議資料.pdf`;
+    a.click();
+
+    hideProgress();
+
+    if (errors.length) {
+      showAlertGlobal('info',
+        `PDF結合完了（一部エラーあり）:<br>` + errors.map(e => `・${e}`).join('<br>'));
+    } else {
+      showAlertGlobal('success', `✅ PDF結合完了！ファイル名: ${getMeetingDateStr()}_PVP会議資料.pdf`);
+    }
+
+  } catch (e) {
+    hideProgress();
+    showAlertGlobal('error', `PDF結合中にエラーが発生しました: ${e.message}`);
+  }
+}
+
+// =====================================================================
+// プログレスUI
+// =====================================================================
+function showProgress(title, desc) {
+  document.getElementById('progressTitle').textContent = title;
+  document.getElementById('progressDesc').textContent  = desc;
+  document.getElementById('progressBar').style.width   = '0%';
+  document.getElementById('progressStatus').textContent = '';
+  document.getElementById('progressOverlay').style.display = 'flex';
+}
+function updateProgress(pct, status) {
+  document.getElementById('progressBar').style.width      = pct + '%';
+  document.getElementById('progressStatus').textContent   = status;
+}
+function hideProgress() {
+  document.getElementById('progressOverlay').style.display = 'none';
+}
+
+// =====================================================================
+// 設定タブ
+// =====================================================================
+function renderSettingsTab() {
+  const cfg     = getConfig();
+  const members = getMembers();
+
+  document.getElementById('settingsSheetId').value   = cfg.sheetId   || '';
+  document.getElementById('settingsSheetName').value = cfg.sheetName || 'フォームの回答 1';
+  document.getElementById('settingsClientId').value  = cfg.clientId  || '';
+
+  renderMemberList(members);
+}
+
+function renderMemberList(members) {
+  const ul = document.getElementById('memberList');
+  ul.innerHTML = members.map((m, i) => `
+    <li class="member-item" draggable="true"
+        ondragstart="mDragStart(event,${i})"
+        ondragover="mDragOver(event,${i})"
+        ondrop="mDrop(event,${i})">
+      <div class="m-order">${i + 1}</div>
+      <input type="text" value="${escHtml(m.name)}" placeholder="氏名"
+        onchange="updateMemberName(${i},'name',this.value)" />
+      <input type="text" value="${escHtml(m.role)}" placeholder="役職"
+        style="color:var(--muted);max-width:180px;"
+        onchange="updateMemberName(${i},'role',this.value)" />
+      <button class="btn-del" onclick="deleteMember(${i})">🗑</button>
+    </li>`).join('');
+}
+
+let _members = [];
+let mDragSrc  = null;
+function mDragStart(e, i) { mDragSrc = i; e.dataTransfer.effectAllowed='move'; }
+function mDragOver(e, i)  { e.preventDefault(); }
+function mDrop(e, i) {
+  if (mDragSrc === null || mDragSrc === i) return;
+  const m = _members.splice(mDragSrc, 1)[0];
+  _members.splice(i, 0, m);
+  renderMemberList(_members);
+}
+function updateMemberName(i, key, val) { _members[i][key] = val; }
+function addMember() {
+  _members.push({ name: '', role: '' });
+  renderMemberList(_members);
+}
+function deleteMember(i) {
+  if (!confirm(`「${_members[i].name}」を削除しますか？`)) return;
+  _members.splice(i, 1);
+  renderMemberList(_members);
+}
+
+function saveSettings() {
+  // メンバーリストの現在値を収集
+  const items = document.querySelectorAll('.member-item');
+  const members = [];
+  items.forEach(li => {
+    const inputs = li.querySelectorAll('input');
+    members.push({ name: inputs[0].value.trim(), role: inputs[1].value.trim() });
+  });
+  saveMembersToStorage(members.filter(m => m.name));
+
+  const cfg = {
+    ...getConfig(),
+    sheetId:   document.getElementById('settingsSheetId').value.trim(),
+    sheetName: document.getElementById('settingsSheetName').value.trim(),
+    clientId:  document.getElementById('settingsClientId').value.trim(),
+  };
+  saveConfigToStorage(cfg);
+  alert('設定を保存しました。');
+}
+
+// 設定タブを開くとき _members を同期
+const _origShowTab = showTab;
+// settingsTab 開く前に _members をセット
+document.getElementById('tab-settings').addEventListener('click', () => {
+  _members = getMembers();
+});
+
+// =====================================================================
+// ユーティリティ
+// =====================================================================
+async function gFetch(url) {
+  if (!accessToken) throw new Error('ログインが必要です。再度Googleアカウントでログインしてください。');
+  return fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showAlertGlobal(type, msg) {
+  document.getElementById('alertArea').innerHTML = `
+    <div class="alert alert-${type}">
+      <span>${type==='error'?'❌':type==='success'?'✅':'ℹ️'}</span>
+      <div>${msg}</div>
+    </div>`;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function showAlert(areaId, type, msg) {
+  document.getElementById(areaId).innerHTML = `
+    <div class="alert alert-${type}">
+      <span>${type==='error'?'❌':type==='success'?'✅':'ℹ️'}</span>
+      <div>${msg}</div>
+    </div>`;
+}
+
+// =====================================================================
+// 起動（GIS読み込み完了は onGoogleLibraryLoad コールバックで処理）
+// =====================================================================
+</script>
+
+<!-- Google Identity Services: async のみ（defer不要）。読み込み完了時に onGoogleLibraryLoad が呼ばれる -->
+<script src="https://accounts.google.com/gsi/client" async></script>
+
+</body>
+</html>
