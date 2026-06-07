@@ -776,11 +776,6 @@ async function downloadCoverPdf() {
         y: A4H - drawH,
         width: A4W,
         height: drawH,
-        xSkew: 0, ySkew: 0,
-        // クロップ
-        ...(pageCount > 1 ? {
-          opacity: 1,
-        } : {}),
       });
     }
 
