@@ -560,7 +560,7 @@ async function loadAgendas() {
   const sheetId   = cfg.sheetId   || '1z0Rtsr0Ri-g8aAh0b8CCIxEGa7vDhGNsspqn6PywmlQ';
   const sheetName = cfg.sheetName || 'フォームの回答 1';
   try {
-    const range = encodeURIComponent(`${sheetName}!A2:M`);
+    const range = encodeURIComponent(`${sheetName}!A2:O`); // O列（審議/報告）まで取得
     const r = await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`);
     const data = await r.json();
     if (data.error) throw new Error(data.error.message);
@@ -570,14 +570,14 @@ async function loadAgendas() {
       timestamp: row[0]||'',
       date:      row[1]||'',
       agNum:     row[2]||'',
-      agOrder:   row[3]||'',
+      agOrder:   row[14]||row[3]||'', // O列（15列目）優先、なければD列にフォールバック
       title:     row[4]||'',
       hasFile:   row[5]||'',
       submitter: row[6]||'',
       aiSummary: row[7]||'',
       comment:   row[8]||'',
       files:     [row[9],row[10],row[11],row[12]].filter(Boolean),
-      category:  detectCategory(row[3]||''),
+      category:  detectCategory(row[14]||row[3]||''), // O列優先
       displayNum:0,
     }));
     autoNumber();
