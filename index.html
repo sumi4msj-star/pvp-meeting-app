@@ -961,30 +961,94 @@ function renderSettingsTab() {
   renderScheduleList(_schedules);
 }
 
+// =====================================================================
+// 設定リスト共通ドラッグ&ドロップ
+// =====================================================================
+let _settingsDragSrc = null;
+let _settingsDragList = null; // 'member' | 'participant'
+
+function settingsDragStart(e, listKey, i) {
+  _settingsDragSrc  = i;
+  _settingsDragList = listKey;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.style.opacity = '0.4';
+}
+function settingsDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  // ドロップ先を視覚的にハイライト
+  e.currentTarget.style.borderColor = 'var(--primary)';
+}
+function settingsDragLeave(e) {
+  e.currentTarget.style.borderColor = '';
+}
+function settingsDrop(e, listKey, i) {
+  e.preventDefault();
+  e.currentTarget.style.borderColor = '';
+  if (_settingsDragSrc === null || _settingsDragSrc === i || _settingsDragList !== listKey) return;
+  if (listKey === 'member') {
+    const moved = _members.splice(_settingsDragSrc, 1)[0];
+    _members.splice(i, 0, moved);
+    renderMemberList(_members);
+  } else if (listKey === 'participant') {
+    const moved = _participantMasters.splice(_settingsDragSrc, 1)[0];
+    _participantMasters.splice(i, 0, moved);
+    renderParticipantMasterList(_participantMasters);
+  }
+  _settingsDragSrc = null;
+}
+function settingsDragEnd(e) {
+  e.currentTarget.style.opacity = '';
+  e.currentTarget.style.borderColor = '';
+  _settingsDragSrc = null;
+}
+
 // 提出者リスト
 function renderMemberList(members) {
-  document.getElementById('memberList').innerHTML=members.map((m,i)=>`
-    <li class="member-item">
-      <div class="m-order">${i+1}</div>
-      <input type="text" value="${escHtml(m.name)}" placeholder="氏名" onchange="_members[${i}].name=this.value" />
-      <input type="text" value="${escHtml(m.role)}" placeholder="役職" style="color:var(--muted);max-width:180px;" onchange="_members[${i}].role=this.value" />
+  document.getElementById('memberList').innerHTML = members.map((m, i) => `
+    <li class="member-item" draggable="true"
+      ondragstart="settingsDragStart(event,'member',${i})"
+      ondragover="settingsDragOver(event)"
+      ondragleave="settingsDragLeave(event)"
+      ondrop="settingsDrop(event,'member',${i})"
+      ondragend="settingsDragEnd(event)">
+      <span style="cursor:grab;color:var(--muted);margin-right:2px;">⠿</span>
+      <div class="m-order">${i + 1}</div>
+      <input type="text" value="${escHtml(m.name)}" placeholder="氏名"
+        onchange="_members[${i}].name=this.value" />
+      <input type="text" value="${escHtml(m.role)}" placeholder="役職"
+        style="color:var(--muted);max-width:180px;"
+        onchange="_members[${i}].role=this.value" />
       <button class="btn-del" onclick="deleteMember(${i})">🗑</button>
     </li>`).join('');
 }
-function addMember(){ _members.push({name:'',role:''}); renderMemberList(_members); }
-function deleteMember(i){ if(!confirm(`「${_members[i].name}」を削除しますか？`)) return; _members.splice(i,1); renderMemberList(_members); }
+function addMember() { _members.push({name:'', role:''}); renderMemberList(_members); }
+function deleteMember(i) {
+  if (!confirm(`「${_members[i].name}」を削除しますか？`)) return;
+  _members.splice(i, 1); renderMemberList(_members);
+}
 
 // 参加者マスターリスト
 function renderParticipantMasterList(parts) {
-  document.getElementById('participantMasterList').innerHTML=parts.map((p,i)=>`
-    <li class="member-item">
-      <div class="m-order">${i+1}</div>
-      <input type="text" value="${escHtml(p.name)}" placeholder="氏名（役職込みで入力）" onchange="_participantMasters[${i}].name=this.value" />
+  document.getElementById('participantMasterList').innerHTML = parts.map((p, i) => `
+    <li class="member-item" draggable="true"
+      ondragstart="settingsDragStart(event,'participant',${i})"
+      ondragover="settingsDragOver(event)"
+      ondragleave="settingsDragLeave(event)"
+      ondrop="settingsDrop(event,'participant',${i})"
+      ondragend="settingsDragEnd(event)">
+      <span style="cursor:grab;color:var(--muted);margin-right:2px;">⠿</span>
+      <div class="m-order">${i + 1}</div>
+      <input type="text" value="${escHtml(p.name)}" placeholder="氏名（役職込みで入力）"
+        onchange="_participantMasters[${i}].name=this.value" />
       <button class="btn-del" onclick="deleteParticipantMaster(${i})">🗑</button>
     </li>`).join('');
 }
-function addParticipantMaster(){ _participantMasters.push({name:'',present:true}); renderParticipantMasterList(_participantMasters); }
-function deleteParticipantMaster(i){ if(!confirm(`「${_participantMasters[i].name}」を削除しますか？`)) return; _participantMasters.splice(i,1); renderParticipantMasterList(_participantMasters); }
+function addParticipantMaster() { _participantMasters.push({name:'', present:true}); renderParticipantMasterList(_participantMasters); }
+function deleteParticipantMaster(i) {
+  if (!confirm(`「${_participantMasters[i].name}」を削除しますか？`)) return;
+  _participantMasters.splice(i, 1); renderParticipantMasterList(_participantMasters);
+}
 
 // 日程リスト
 function renderScheduleList(schedules) {
