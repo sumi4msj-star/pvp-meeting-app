@@ -751,33 +751,39 @@ async function downloadCoverPdf() {
     container.innerHTML = '';
 
     updateProgress(70, 'PDF化しています...');
-    const imgData = canvas.toDataURL('image/png');
-    const pdfDoc  = await PDFLib.PDFDocument.create();
+    const pdfDoc = await PDFLib.PDFDocument.create();
 
     // A4サイズ (595.28 x 841.89 pt)
     const A4W = 595.28, A4H = 841.89;
 
-    // キャンバスが複数ページにまたがる場合も対応
-    const canvasW = canvas.width;
-    const canvasH = canvas.height;
-    const pageHeightPx = canvasW * (A4H / A4W); // 1ページ分の高さ（px換算）
-    const pageCount = Math.ceil(canvasH / pageHeightPx);
+    // canvas を A4 高さ分ずつスライスして各ページに貼り付ける
+    const canvasW      = canvas.width;
+    const canvasH      = canvas.height;
+    const pageHeightPx = Math.round(canvasW * (A4H / A4W)); // canvas座標でのA4高さ
+    const pageCount    = Math.ceil(canvasH / pageHeightPx);
 
-    const img = await pdfDoc.embedPng(imgData);
+    for (let pg = 0; pg < pageCount; pg++) {
+      updateProgress(70 + Math.round((pg / pageCount) * 20), `ページ ${pg+1}/${pageCount} を生成中...`);
 
-    for (let pg=0; pg<pageCount; pg++) {
+      const startY  = pg * pageHeightPx;
+      const sliceH  = Math.min(pageHeightPx, canvasH - startY);
+
+      // このページ分だけ切り出した一時 canvas を作成
+      const tmp = document.createElement('canvas');
+      tmp.width  = canvasW;
+      tmp.height = pageHeightPx; // 最終ページも同じ高さ（余白は白）
+      const ctx  = tmp.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvasW, pageHeightPx);
+      ctx.drawImage(canvas,
+        0, startY, canvasW, sliceH,  // 元canvas の切り出し範囲
+        0, 0,      canvasW, sliceH   // 一時canvas への描画位置
+      );
+
+      const sliceData = tmp.toDataURL('image/png');
+      const img  = await pdfDoc.embedPng(sliceData);
       const page = pdfDoc.addPage([A4W, A4H]);
-      const srcY  = pg * pageHeightPx;
-      const srcH  = Math.min(pageHeightPx, canvasH - srcY);
-      const ratio = srcH / canvasH;
-      const drawH = A4H * (srcH / pageHeightPx);
-
-      page.drawImage(img, {
-        x: 0,
-        y: A4H - drawH,
-        width: A4W,
-        height: drawH,
-      });
+      page.drawImage(img, { x: 0, y: 0, width: A4W, height: A4H });
     }
 
     updateProgress(90, '保存中...');
@@ -821,7 +827,7 @@ function buildCoverHtml(title, dateDisp, parts, schedules, agendas) {
     </tr>`).join('');
 
   return `
-  <div style="width:794px;min-height:1123px;background:white;padding:50px 60px;font-family:'Hiragino Sans','Meiryo','Yu Gothic',sans-serif;font-size:13px;line-height:1.7;color:#111;">
+  <div style="width:794px;background:white;padding:50px 60px;font-family:'Hiragino Sans','Meiryo','Yu Gothic',sans-serif;font-size:13px;line-height:1.7;color:#111;">
 
     <!-- タイトル -->
     <div style="text-align:center;margin-bottom:30px;">
