@@ -431,7 +431,7 @@ function buildTokenClient(clientId) {
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: clientId,
     scope: ['https://www.googleapis.com/auth/drive.readonly',
-            'https://www.googleapis.com/auth/spreadsheets.readonly',
+            'https://www.googleapis.com/auth/spreadsheets', // 読み書き（設定保存のため）
             'openid','email','profile'].join(' '),
     callback: handleToken,
     error_callback: (err) => showLoginError(`ログインエラー: ${err.type||JSON.stringify(err)}`),
@@ -483,12 +483,13 @@ function initGIS() {
 // =====================================================================
 // 画面切り替え
 // =====================================================================
-function showApp() {
+async function showApp() {
   document.getElementById('loginScreen').style.display  = 'none';
   document.getElementById('appHeader').style.display    = 'flex';
   document.getElementById('appTabs').style.display      = 'flex';
   document.getElementById('mainContent').style.display  = 'block';
   showTab('main');
+  await loadSettingsFromSheet(); // スプレッドシートから設定を読み込む
   renderParticipantChips();
   loadAgendas();
 }
@@ -1061,18 +1062,105 @@ function renderScheduleList(schedules) {
 function addSchedule(){ _schedules.push({date:'',note:''}); renderScheduleList(_schedules); }
 function deleteSchedule(i){ _schedules.splice(i,1); renderScheduleList(_schedules); }
 
-function saveSettings() {
-  saveMembersToStorage(_members.filter(m=>m.name));
-  saveParticipants(_participantMasters.filter(p=>p.name).map(p=>({...p,present:true})));
-  saveSchedules(_schedules.filter(s=>s.date));
+// =====================================================================
+// 設定をスプレッドシートで共有（PVP設定シート）
+// 複数人が同じシートを参照するため、ローカルではなくシートに保存する
+// =====================================================================
+const SETTINGS_SHEET_NAME = 'PVP設定';
+
+async function loadSettingsFromSheet() {
+  const cfg = getConfig();
+  const sheetId = cfg.sheetId || '1z0Rtsr0Ri-g8aAh0b8CCIxEGa7vDhGNsspqn6PywmlQ';
+  try {
+    const range = encodeURIComponent(`${SETTINGS_SHEET_NAME}!A1:B10`);
+    const r = await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`);
+    const data = await r.json();
+    if (data.error) {
+      // シートが存在しない場合はローカルストレージのまま（初回のみ）
+      console.log('PVP設定シート未作成。ローカル設定を使用します。');
+      return;
+    }
+    const rows = data.values || [];
+    rows.forEach(row => {
+      if (!row[0] || !row[1]) return;
+      try {
+        if (row[0] === 'schedules')    saveSchedules(JSON.parse(row[1]));
+        if (row[0] === 'participants') saveParticipants(JSON.parse(row[1]));
+        if (row[0] === 'members')      saveMembersToStorage(JSON.parse(row[1]));
+      } catch(e) { console.warn('設定シート読み込みエラー:', row[0], e); }
+    });
+    console.log('スプレッドシートから設定を読み込みました。');
+  } catch(e) {
+    console.warn('設定シート読み込み失敗。ローカル設定を使用します:', e.message);
+  }
+}
+
+async function saveSettingsToSheet(members, participants, schedules) {
+  const cfg = getConfig();
+  const sheetId = cfg.sheetId || '1z0Rtsr0Ri-g8aAh0b8CCIxEGa7vDhGNsspqn6PywmlQ';
+  try {
+    // まずシートが存在するか確認し、なければ作成
+    const metaR = await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties.title`);
+    const meta  = await metaR.json();
+    const exists = (meta.sheets||[]).some(s=>s.properties.title===SETTINGS_SHEET_NAME);
+    if (!exists) {
+      await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
+        method: 'POST',
+        body: JSON.stringify({ requests: [{ addSheet: { properties: { title: SETTINGS_SHEET_NAME } } }] }),
+      });
+    }
+    // 設定を書き込む（A1:B3）
+    const values = [
+      ['schedules',    JSON.stringify(schedules)],
+      ['participants', JSON.stringify(participants)],
+      ['members',      JSON.stringify(members)],
+    ];
+    const range = encodeURIComponent(`${SETTINGS_SHEET_NAME}!A1:B3`);
+    await gFetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?valueInputOption=RAW`, {
+      method: 'PUT',
+      body: JSON.stringify({ values }),
+    });
+    return true;
+  } catch(e) {
+    console.error('設定シート保存エラー:', e);
+    return false;
+  }
+}
+
+// gFetch をPOST/PUT対応に拡張
+async function gFetch(url, options={}) {
+  if (!accessToken) throw new Error('ログインが必要です。');
+  const headers = { Authorization: `Bearer ${accessToken}` };
+  if (options.body) headers['Content-Type'] = 'application/json';
+  return fetch(url, { ...options, headers: { ...headers, ...(options.headers||{}) } });
+}
+
+async function saveSettings() {
+  const members      = _members.filter(m=>m.name);
+  const participants = _participantMasters.filter(p=>p.name).map(p=>({...p,present:true}));
+  const schedules    = _schedules.filter(s=>s.date);
+
+  // ローカルにも保存（オフライン時のフォールバック）
+  saveMembersToStorage(members);
+  saveParticipants(participants);
+  saveSchedules(schedules);
   saveConfigToStorage({
     ...getConfig(),
     sheetId:   document.getElementById('settingsSheetId').value.trim(),
     sheetName: document.getElementById('settingsSheetName').value.trim(),
     clientId:  document.getElementById('settingsClientId').value.trim(),
   });
-  alert('設定を保存しました。');
-  renderParticipantChips(); // メイン画面の参加者チップも更新
+
+  // スプレッドシートにも保存（共有のため）
+  const btn = document.querySelector('.btn-save-settings');
+  btn.textContent = '💾 保存中...'; btn.disabled = true;
+  const ok = await saveSettingsToSheet(members, participants, schedules);
+  btn.textContent = '💾 設定を保存'; btn.disabled = false;
+
+  if (ok) alert('設定を保存しました。\n（スプレッドシートに同期済み。他のユーザーにも反映されます）');
+  else    alert('設定をローカルに保存しました。\n※スプレッドシートへの同期に失敗しました。');
+
+  renderParticipantChips();
 }
 
 document.getElementById('tab-settings').addEventListener('click', ()=>{ _members=getMembers(); });
@@ -1080,10 +1168,6 @@ document.getElementById('tab-settings').addEventListener('click', ()=>{ _members
 // =====================================================================
 // ユーティリティ
 // =====================================================================
-async function gFetch(url) {
-  if (!accessToken) throw new Error('ログインが必要です。');
-  return fetch(url,{headers:{Authorization:`Bearer ${accessToken}`}});
-}
 function downloadBlob(data, filename, type) {
   const blob=new Blob([data],{type});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click();
