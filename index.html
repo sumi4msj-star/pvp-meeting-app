@@ -808,7 +808,10 @@ function buildCoverHtml(title, dateDisp, parts, schedules, agendas) {
       <td style="padding:5px 8px;border:1px solid #ccc;text-align:center;font-weight:bold;white-space:nowrap;">
         ${ag.category==='shingi'?'審議':'報告'}${ag.displayNum}
       </td>
-      <td style="padding:5px 8px;border:1px solid #ccc;">${escHtml(ag.title)}</td>
+      <td style="padding:5px 8px;border:1px solid #ccc;">
+        ${escHtml(ag.title)}
+        ${ag.comment ? `<div style="font-size:11px;color:#555;margin-top:3px;padding-left:8px;border-left:2px solid #ccc;">${escHtml(ag.comment)}</div>` : ''}
+      </td>
       <td style="padding:5px 8px;border:1px solid #ccc;text-align:center;">
         ${ag.submitter?escHtml(ag.submitter):''}
       </td>
